@@ -8,12 +8,14 @@
 //max size and buffer initializations 
 #define MAXSIZE 1024
 char buffer[MAXSIZE];
-char input_command[50];
-char file_name[50];
+//char input_command[50];
+//char file_name[50];
+char ftp_input[101];
 //given values
 char *success_message = "yes";
 char *fail_message = "no";
 char *message_to_send = "ftp";
+//char ip_addr[14] = "128.100.13.   ";
 
 
 
@@ -21,7 +23,60 @@ char *message_to_send = "ftp";
 int main(int argc, char *argv[]){
     //error casting input
    if (argc != 3){
-        printf("Try again with 2 arguments");
+        printf("Try again with 2 arguments\n");
+        exit(0);
+    }
+    /*GETTING THE IP ADDRESS*/
+    char *ip_addr;
+    //Case 1:  ug machine number is 2 digits
+    if (strlen(argv[1]) == 21)
+    {
+        ip_addr = (char*)malloc(13*sizeof(char));
+        //always same
+        ip_addr[0] = '1';
+        ip_addr[1] = '2';
+        ip_addr[2] = '8';
+        ip_addr[3] = '.';
+        ip_addr[4] = '1';
+        ip_addr[5] = '0';
+        ip_addr[6] = '0';
+        ip_addr[7] = '.';
+        ip_addr[8] = '1';
+        ip_addr[9] = '3';
+        ip_addr[10] = '.';
+        //machine number
+        ip_addr[11] = argv[1][2];
+        ip_addr[12] = argv[1][3];
+        //end of string
+        ip_addr[13] = '\0';
+    }
+    //Case 2:  ug machine number is 3 digits
+    else if (strlen(argv[1]) == 22)
+    {
+        ip_addr = (char*)malloc(14*sizeof(char));
+        //always same
+        ip_addr[0] = '1';
+        ip_addr[1] = '2';
+        ip_addr[2] = '8';
+        ip_addr[3] = '.';
+        ip_addr[4] = '1';
+        ip_addr[5] = '0';
+        ip_addr[6] = '0';
+        ip_addr[7] = '.';
+        ip_addr[8] = '1';
+        ip_addr[9] = '3';
+        ip_addr[10] = '.';
+        //machine number
+        ip_addr[11] = argv[1][2];
+        ip_addr[12] = argv[1][3];
+        ip_addr[13] = argv[1][4];
+        //end of string
+        ip_addr[14] = '\0';
+    }
+    //else obviously wrong
+    else
+    {
+        printf("Invalid server address\n");
         exit(0);
     }
 
@@ -47,19 +102,35 @@ int main(int argc, char *argv[]){
     // dont need cause of first memset but just to be sure
     memset(serv_addr.sin_zero, 0, sizeof(serv_addr.sin_zero));
     //stors IP adress in the s_addr
-    serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
+    //serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
+    if (inet_addr(ip_addr) == -1)
+    {
+        printf("Invalid server address\n");
+        exit(0);
+    }
+    else serv_addr.sin_addr.s_addr = inet_addr(ip_addr);
 
-    
-    /////////////////////////////////////////////////////////////////////
-    ///////////////// Dealing with user input /////////////////////////// /* STILL NEED TO DO THIS PROPERLY */
-    /////////////////////////////////////////////////////////////////////
+    /*Wait for server?*/
+
     printf("enter: ftp <filename>\n");
-    scanf("%s %s", input_command, file_name);
-
+    //scanf("%s %s", input_command, file_name);
+    //char *ftp_input;
+    if (fgets(ftp_input, 60, stdin) == NULL)
+    {
+        printf("invalid input\n");
+        exit(0);
+    }
+    char *input_command = strtok(ftp_input,  " ");
+    char *file_name = strtok(NULL, "\n");
+    if (input_command == NULL || file_name == NULL)
+    {
+        printf("invalid input\n");
+        exit(0);
+    }
 
     // make sure command is file transfer program
     if(strcmp(input_command, "ftp")!=0){
-        printf("invalid command, remember: ftp");
+        printf("invalid command. remember: ftp\n");
         return 0;
     }
 
@@ -73,8 +144,9 @@ int main(int argc, char *argv[]){
             printf("send failed\n"); 
             exit(1);
         }
-    } 
+    }
 
+    printf("waiting for server...\n");
 
     //declare receiving struct and set its length for the recv function 
     struct sockaddr_in to_recieve;
@@ -90,7 +162,7 @@ int main(int argc, char *argv[]){
 
     //if get yes from server then bless 
     if (strcmp("yes", buffer) == 0){
-        printf("A file transfer can start\n");
+        printf("A file transfer can start.\n");
     } else{
         exit(1);
     }

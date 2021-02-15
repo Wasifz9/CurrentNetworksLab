@@ -57,7 +57,6 @@ int main(int argc, char *argv[]){
 
 
     if (strcmp(expected_client_message, buffer) == 0){//success
-        printf("sent!!\n");
         if ((sendto(sock_fd, success_message, strlen(success_message), 0, (struct sockaddr *) &client_addr, length)) == -1) {
             printf("couldnt send\n");
             exit(1);

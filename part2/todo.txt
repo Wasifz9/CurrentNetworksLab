@@ -1,0 +1,21 @@
+Currently, deliver sends a pre determined string to server. server checks if it is the required message and then sends back acknowledgement which makes deliver output: a file trasnfer can start
+
+
+Now, all those steps must occur. THEN:
+    Deliver: 
+        must open and read file. (DONE)
+        
+        must add contents to buffers of max_size 1000.
+        do this repeatedly until end of file is reached. 
+        
+        Depending on how many buffers were filled, that will give total amount of packets that must be sent.
+
+        Packets are sent in string form as such:  ->  packet = “3:2:10:foobar.txt:lo World!\n”
+                                                                total amount of frags : current frag number : size of frag : name of file : data 
+        
+    Server:
+        Recieves these packets and writes to a file. 
+        
+
+        
+    

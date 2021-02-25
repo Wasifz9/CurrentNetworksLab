@@ -9,10 +9,9 @@
 char *success_message = "yes";
 char *fail_message = "no";
 char *expected_client_message = "ftp";
-char *ack_message = "ACK";
-char *nack_message = "NACK";
 #define BUF_SIZE 1000
-char buffer[2048];
+
+char buffer[2000];
 //Packet Struct
 struct Packet {
     unsigned int total_frag;
@@ -90,23 +89,70 @@ void parsePacket2(const char* str, struct Packet *packet) {
             member++;
         }
     }
-    //now, i1 = i2 = index of the first byte of data
-    memcpy(&packet->file_data, str + i1, atoi(size));
+}
 
-    packet->total_frag = atoi(total_frag);
-    free(total_frag);
-    packet->frag_no = atoi(frag_no);
-    free(frag_no);
-    packet->size = atoi(size);
-    free(size);
-    packet->filename = filename;
-    filename = NULL;
+void stringToPacket(const char* str, struct Packet *packet) { ///// not my code must be changed or the parsing must be done differently.
+
+    // Compile Regex to match ":"
+    regex_t regex;
+    if(regcomp(&regex, "[:]", REG_EXTENDED)) {
+        fprintf(stderr, "Could not compile regex\n");
+    }
+
+    // Match regex to find ":" 
+    regmatch_t pmatch[1];
+    int cursor = 0;
+    char buf[1000];
+
+    // Match total_frag
+    if(regexec(&regex, str + cursor, 1, pmatch, REG_NOTBOL)) {
+        fprintf(stderr, "Error matching regex\n");
+        exit(1);
+    }
+    memset(buf, 0, BUF_SIZE * sizeof(char));
+    memcpy(buf, str + cursor, pmatch[0].rm_so);
+    packet -> total_frag = atoi(buf);
+    cursor += (pmatch[0].rm_so + 1);
+
+    // Match frag_no
+    if(regexec(&regex, str + cursor, 1, pmatch, REG_NOTBOL)) {
+        fprintf(stderr, "Error matching regex\n");
+        exit(1);
+    }
+    memset(buf, 0,  BUF_SIZE * sizeof(char));
+    memcpy(buf, str + cursor, pmatch[0].rm_so);
+    packet -> frag_no = atoi(buf);
+    cursor += (pmatch[0].rm_so + 1);
+
+    // Match size
+    if(regexec(&regex, str + cursor, 1, pmatch, REG_NOTBOL)) {
+        fprintf(stderr, "Error matching regex\n");
+        exit(1);
+    }
+    memset(buf, 0, BUF_SIZE * sizeof(char));
+    memcpy(buf, str + cursor, pmatch[0].rm_so);
+    packet -> size = atoi(buf);
+    cursor += (pmatch[0].rm_so + 1);
+
+    // Match filename
+    if(regexec(&regex, str + cursor, 1, pmatch, REG_NOTBOL)) {
+        fprintf(stderr, "Error matching regex\n");
+        exit(1);
+    }
+
+
+    memcpy(packet -> filename, str + cursor, pmatch[0].rm_so);
+    packet -> filename[pmatch[0].rm_so] = 0;
+    cursor += (pmatch[0].rm_so + 1);
     
-    /*printf("total_frag:\t%d\n", packet -> total_frag);
+    // Match filedata
+    memcpy(packet -> file_data, str + cursor, packet -> size);
+
+    printf("total_frag:\t%d\n", packet -> total_frag);
     printf("frag_no:\t%d\n", packet -> frag_no);
     printf("size:\t%d\n", packet -> size);
     printf("filename:\t%s\n", packet -> filename);
-    printf("filedata:\t%s\n", packet -> file_data);*/
+    printf("filedata:\t%s\n", packet -> file_data);
 
 }
 int main(int argc, char *argv[]){
@@ -166,12 +212,11 @@ int main(int argc, char *argv[]){
             exit(1);
        }
     }
-    int old_pack_num = 0;
-    int pack_num = 0;   
+
+    int pack_num = 0;
     int packs_to_rec = 100;
     FILE *outStream = NULL;
     char *total_frag, *frag_no, *size, *filename, *filedata;
-
     while (pack_num < packs_to_rec){
         struct Packet new_packet;
         if (recvfrom(sock_fd, buffer, 2048, 0, (struct sockaddr *) &client_addr, &length) == -1){
@@ -193,24 +238,6 @@ int main(int argc, char *argv[]){
         
         pack_num = new_packet.frag_no;
         packs_to_rec = new_packet.total_frag;
-        printf("%d/%d\n", pack_num, packs_to_rec);
-
-        //memset(buffer, 0, sizeof buffer);
-        if (pack_num - old_pack_num == 1){
-            if ((sendto(sock_fd, ack_message, strlen(ack_message), 0, (struct sockaddr *) &client_addr, length)) == -1) {
-                printf("ACK not sent\n");
-                exit(1);
-            }
-            printf("Ack sent\n");
-        }else {
-            if ((sendto(sock_fd, nack_message, strlen(nack_message), 0, (struct sockaddr *) &client_addr, length)) == -1) {
-                printf("NACK not sent\n");
-                exit(1);
-            }
-            printf("Nack sent\n");
-        }
-        
-        old_pack_num = pack_num; 
 
 
         /*
@@ -231,7 +258,8 @@ int main(int argc, char *argv[]){
         pack_num = currentPacket;
         packs_to_rec = totalPackets;*/
     }
-    //fclose(outStream);
+    
     close(sock_fd);
     return 0;
+
 }
